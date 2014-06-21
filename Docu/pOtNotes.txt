@@ -1,0 +1,200 @@
+David Tolpin, dvd@Jet.Msk.SU.
+
+                    Overview.
+
+pOt is an Oberon to C translator. It is derived from one-pass Wirth's
+compiler described in "Project Oberon" and retains some of the
+implementation limitations specific to that compiler.
+
+pOt itself is written in Oberon (excluding three small
+modules' implementation - Files.c, Reals.c and OS.c), and have
+been successfully compiled under SunOS 4.1, FreeBSD, Linux and 
+MSDOS (using Turbo C 2.0).
+
+pOt  IS NOT Oberon-2 implementation. It is not that difficult to
+implement the dialect, but I hate adding eclectic features to
+Oberon. It implements a language that is very close to one
+described in "Oberon Report" by Niklaus Wirth. There are maybe
+some inconsistencies, as well as implementation limitations, but
+mainly the cause for them is the pOt's genesis, not my changes.
+
+Recently I compiled (with minor changes) Coco/R with pOt - it
+works, however my Texts implementation  relates a Text object to
+a disk file, not to a memory buffer with direct access. By the
+way, I don't like the way Coco/R is written (I mean the source
+codes). 
+
+Garbage collector works for me well enough, and although it is
+expensive, the overall result is satisfactory - I can translate 
+(on MSDOS machine with TC 2.0 compiled pOt) the whole pOt within 
+400 Kb of RAM; it requires to set GC threshold to 16 Kb, that
+decreases the execution speed by 10%. With GC threshold set to
+128 Kb and collecting between source files 460 Kb is more than
+sufficient memory. (by the way, the executable itself is about
+300 Kb, but I suspect that TC 2.0 stores public symbols' names in
+it).
+
+                  pOt's output.
+
+pOt produces three files for each source module (*.Mod)
+
+  *.Cym - symbol file,
+  *.c -  C language source file,
+  *.h - external objects and types declarations (this file is
+  NOT included by *.c),
+  *.hi - static array that contains all string constants is
+  defined in this file, and *.c includes it.
+
+New *.h created only if *.Cym is changed, thus, it is possible
+to use c <- h file dependencies efficiently.
+
+Main module for a program is created by shell script mkmain.sh,
+and the script takes two arguments - the names of the module and
+the exported procedure to call.
+
+               Environment settings. 
+
+When pOt (actually, any pOt compiled program using Files module to
+handle files) tries to open an old file, it first looks for the
+file in the current directory, then in directories listed in
+POTLAND environment variable with obligatory trailing slashes.
+Directory names' separator is slash (this work for MSDOS too),
+paths' separator is semicolon for DOS, colon for UNIX.
+
+New files are always created in the current directory.
+
+              Distribution.
+
+pOt - the root directory
+  bin - compiled binaries
+  Docu - documentation files
+  lib - Oberon libraries
+    Core - core library and RTL
+  src - source code for pOt
+  Tests - if exists, may contain several simple Oberon programs
+  Scripts - some shell scripts
+              
+              Using pOt.
+
+Call to pOt has the following format:
+  
+    "pOt" {("-"options|file|"@"parfile)" "}
+ 
+where file is a source file name (with extension),
+parfile is a name of a file from that command line parameters
+are read (in which case all control characters (with 0 < code < 32)
+are treated as separators),
+options is a list of characters from the following set:
+    ILMNORSTUilmnorstu;
+each character in either case corresponds to a different flag,
+an upper-case character turns the corresponding flag on, a lower case
+off. The flags (and their corresponding characters) are
+following
+
+	F - wraps lines of C code so they almost fit 
+			into 80 columns (default off),
+	H - allows generation of new C .h files (default off);
+  I - index check (default on),
+  L - if on, error messages are displayed inf format
+      <filename>(<line>,<col>) err|warning <errnum>
+      if off,
+      pos <posnum> err|warning <errnum> (default off);
+  M - include CR (CHR(13)) as the first character into 
+      the line separator (default off);
+  N - generate line numbers (default off);
+  O - nil pointer dereference check (default on);
+  R - range check (default on);
+  S - allow generation of new symbol file (default off);
+  T - type checks (default on);
+  U - append NL (CHR(10)) to the line separator, if not
+     already appended (default on).
+
+If both 'm' and 'u' are set, 'U' is assumed; setting these
+flags to 'UM' forms the MSDOS line separator.
+
+Errors and warnings are reported by number, the explanations are
+listed  in pOtErr.Txt, that is in Docu directory of the
+distribution.
+
+        Compiling C text and linking.
+
+pOt produces ANSI C text, but the text is tricky enough to make some
+compilers shout. Turn off warnings, they are completely
+useless. pOtRTL.h must be made accessible via include path.
+When linking a program containing Oberon modules, result of
+compilation of pOtRTL.c must be included into the link list - it
+is the pOt's runtime library. Usually, modules pOtRTL.c, OS.c,
+Reals.c, and OS.c (these modules are written manually) are
+composed into a pOtCore.(a|lib|so) library.
+
+If a stand-alone Oberon program is created, a main module must
+be created (supposedly by mkmain.sh) and included into the link
+list.
+
+        Important notes on implementation's limitations.
+
+First, if a string is passed to an array value parameter that is
+longer by more than 2048 elements than the string, error 244 is
+reported. This maybe avoided by, e.g., copying the string (using
+COPY function) to a character array variable and then passing
+the variable. (COCD.Overhead sets the limit).
+
+Second, a named string constant's value may not be set via
+referencing to an imported constant. This is much weaker
+limitation than Wirth's, according to which strings cannot be
+exported at all.
+
+Most other limitations are caused by sizes of corresponding
+compiler's tables. 
+
+              Minimum library.
+
+The library (lib directory and subdirectories of the distribution) 
+contains several modules those may be useful. Since they are
+usually 'demand written' I do not document them here. 
+
+	      Recent changes.
+
+The possibility to insert untranslated calls to C-functions is added.
+Here is an exerpt from my letter on the subject:
+
+> So called "code procedures" will be used for that. The syntax is retained
+> as it is implemented in Wirth's compiler, i.e. the name of the procedure
+> is prepended with "-", and after the declaration a number is specified.
+> 
+> e.g.,
+> 
+> PROCEDURE fopen(i: LONGINT; j:LONGINT):LONGINT 0;
+> 
+> But the number is meaningless in my implementation.
+> 
+> These procedures are translated into the calls to C procedures of the same
+> name. It should be common practice to use them in conjuction with SYSTEM.ADR:
+> 
+> 
+> MODULE Clib;
+> 	PROCEDURE -fopen*(fn: LONGINT; mode: LONGINT): LONGINT 0;
+> END Clib.
+> 
+> MODULE Test;
+> 	IMPORT SYSTEM, Clib;
+> 	PROCEDURE foo*;
+> 		VAR a:LONGINT; name,mode: ARRAY 100 OF CHAR;
+> 	BEGIN name := "test"; mode := "r+";
+> 		a := Clib.fopen(SYSTEM.ADR(name),SYSTEM.ADR(mode))
+> 	END foo;
+> END Test.
+
+This release is intended for testing, so don't expect too much 
+from it. If you have any bug reports/suggestions please e-mail
+them to any of the following addresses
+
+  dvd@davidashen.net
+
+letters in English, Russian/koi8 are OK. I understand German too,
+but the answer will be in English. My wife knows French.
+
+Please do not offer language extensions.
+
+DT 31-Oct-94. Moscow.
+E-mail updated 21-Aug-2003

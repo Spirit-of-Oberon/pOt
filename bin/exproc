@@ -1,0 +1,2 @@
+#!/bin/sh
+egrep 'PROCEDURE +[A-Z][a-zA-Z0-9]* *\*' $*

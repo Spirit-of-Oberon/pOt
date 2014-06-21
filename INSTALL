@@ -1,0 +1,11 @@
+To install,
+  - set environment variables (look in ~/topot.sh).
+  - change file names if your file system is case-sensitive (~/scripts/chnames.sh).
+   cd $(POT)/lib/Core; make
+   cd ..; make
+   cd $(POT)/src; make
+   cp pOt $(POT)/bin
+
+ build the libraries using pOt, and rebuild the compiler.
+
+ David Tolpin.
